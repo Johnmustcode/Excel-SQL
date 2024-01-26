@@ -1,8 +1,8 @@
 import sys
 import pandas as pd
-from PyQt5.QtWidgets import QApplication, QMainWindow, QTabWidget, QVBoxLayout, QPushButton, QLineEdit, QFileDialog, QTableView, QWidget
-from PyQt5.QtWidgets import QComboBox
+from PyQt5.QtWidgets import QApplication, QMainWindow, QTabWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit, QFileDialog, QTableView, QWidget
 from PyQt5.QtCore import QAbstractTableModel, Qt
+from pandasql import sqldf
 
 class PandasModel(QAbstractTableModel):
     def __init__(self, data):
@@ -35,31 +35,64 @@ class ExcelViewer(QMainWindow):
 
     def initUI(self):
         # 初始化窗口
-        self.setGeometry(300, 300, 600, 400)
+        self.setGeometry(300, 300, 800, 400)
         self.setWindowTitle('Excel-SQL Viewer')  # 设置窗口标题
 
         # 创建中央布局
         central_widget = QWidget()
-        central_layout = QVBoxLayout()
-        central_widget.setLayout(central_layout)
+        horizontal_layout = QHBoxLayout()
+        central_widget.setLayout(horizontal_layout)
         self.setCentralWidget(central_widget)
+
+        # 创建左侧的垂直布局（包括文件选择按钮、文件路径文本框、工作表的标签页）
+        left_layout = QVBoxLayout()
+        horizontal_layout.addLayout(left_layout)
 
         # 添加文件选择按钮
         self.btn_open = QPushButton("Open Excel File")
         self.btn_open.clicked.connect(self.openFileDialog)  # 绑定按钮点击事件
-        central_layout.addWidget(self.btn_open)
+        left_layout.addWidget(self.btn_open)
         
         # 添加文件路径文本框
         self.line_edit = QLineEdit()
-        central_layout.addWidget(self.line_edit)
+        left_layout.addWidget(self.line_edit)
 
         # 创建工作表的标签页
         self.tabs = QTabWidget()
-        central_layout.addWidget(self.tabs)
+        left_layout.addWidget(self.tabs)
+
+        # 创建右侧的垂直布局（包括SQL查询输入框、按钮、SQL查询结果表格视图）
+        right_layout = QVBoxLayout()
+        horizontal_layout.addLayout(right_layout)
+
+        # 创建SQL查询结果的表格视图
+        self.sql_result_table_view = QTableView()
+        right_layout.addWidget(self.sql_result_table_view)
+
+        # 添加SQL查询输入框和按钮
+        self.sql_edit = QLineEdit()
+        self.sql_query_btn = QPushButton("Execute SQL Query")
+        self.sql_query_btn.clicked.connect(self.executeSQLQuery)
+        
+        right_layout.addWidget(self.sql_edit)
+        right_layout.addWidget(self.sql_query_btn)
 
         
 
         self.show()  # 显示窗口
+    def executeSQLQuery(self):
+        sql_query = self.sql_edit.text()
+        if sql_query:
+            try:
+                result_df = sqldf(sql_query, globals())
+                self.updateResultTableView(result_df)
+            except Exception as e:
+                print(f"Error executing SQL query: {e}")
+
+    def updateResultTableView(self, df):
+        # 将SQL查询结果设置到SQL结果表格视图中
+        model = PandasModel(df)
+        self.sql_result_table_view.setModel(model)
 
     def openFileDialog(self):
         options = QFileDialog.Options()
